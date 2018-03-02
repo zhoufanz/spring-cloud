@@ -1,0 +1,1280 @@
+swagger: '2.0'
+info:
+  title: 备件检验入库
+  description:  备件检验入库相关操作
+  version: "1.0.0"
+host: localhost:3000
+schemes:
+  - https
+basePath: /v1
+produces:
+  - application/json
+paths:
+  /storage/in/plan-orders/init:
+    get:
+      summary: 入库计划单界面初始化数据
+      tags:
+        - PlanOrder
+      responses:
+        200:
+          description: 检验界面初始化数据
+          schema:
+            required:
+              - payload
+            properties:
+              message:
+                type: string
+              payload:
+                $ref: '#/definitions/PlanOrderInit'
+  /storage/in/plan-orders:
+    get:
+      summary: 入库计划单
+      description: 根据查询条件，返回符合条件的入库计划单并按指定规则排序
+      tags:
+        - PlanOrder
+      parameters:
+        - name: code
+          in: query
+          description: 入库计划单编号
+          type: array
+          uniqueItems: true
+          collectionFormat: pipes
+          items:
+            type: string
+        - name: deliveryOrderCode
+          in: query
+          description: 发运单编号
+          type: array
+          uniqueItems: true
+          collectionFormat: pipes
+          items:
+            type: string
+        - name: createTimeStart
+          in: query
+          description: 开始时间
+          type: string
+          format: date
+        - name: createTimeEnd
+          in: query
+          description: 结束时间
+          type: string
+          format: date
+        - name: warehouseId
+          in: query
+          description: 仓库Id
+          type: array
+          uniqueItems: true
+          collectionFormat: pipes
+          items:
+            type: integer
+            minimum: 1
+        - name: otherCompanyCode
+          in: query
+          description: 对方单位编号
+          type: string
+        - name: otherCompanyName
+          in: query
+          description: 对方单位名称
+          type: string
+        - name: status
+          in: query
+          description: 入库计划单状态
+          type: array
+          uniqueItems: true
+          collectionFormat: pipes
+          items:
+            type: integer
+            enum: [1,2,3,4]
+        - name: type
+          in: query
+          description: 入库计划单类型
+          type: array
+          uniqueItems: true
+          collectionFormat: pipes
+          items:
+            type: integer
+            enum: [1,2,3,4,5,6,7,8]
+        - name: pageSize
+          in: query
+          description: 每页数据量
+          type: integer
+          default: 50
+          minimum: 10
+        - name: pageIndex
+          in: query
+          description: 指定页
+          type: integer
+          default: 0
+          minimum: 0
+        - name: sortField
+          in: query
+          description: 排序字段
+          type: string
+          default: createTime
+        - name: isDesc
+          in: query
+          description: 倒序排列
+          type: boolean
+          default: false
+          allowEmptyValue: true
+      responses:
+        200:
+          description: 入库计划单列表
+          schema:
+            required: 
+              - payload
+            properties:
+              message:
+                type: string
+                description: 消息
+              payload:
+                required:
+                  - content
+                  - totalElements
+                properties:
+                  content:
+                    type: array
+                    items:
+                      $ref: '#/definitions/PlanOrder'
+                  pageIndex:
+                    type: integer
+                    format: int32
+                    description: 当前页码
+                  pageSize:
+                    type: integer
+                    format: int32
+                    description: 每页显示数量
+                  sort:
+                    $ref: '#/definitions/Sort'
+                  totalElements:
+                    type: integer
+                    format: int64
+                    description: 总命中条数
+                    minimum: 0
+                  totalPages:
+                    type: integer
+                    format: int32
+                    description: 总命中页数
+  /storage/in/plan-orders/{id}/detail:
+    get:
+      summary: 入库计划单详情
+      description: 根据入库计划单Id，查询入库计划单详情
+      tags:
+        - PlanOrder
+      parameters:
+        - name: id
+          in: path
+          type: integer
+          minimum: 1
+          description: 入库计划单Id
+          required: true
+      responses:
+        200:
+          description: 入库计划单详情
+          schema:
+            required: 
+              - payload
+            properties:
+              message:
+                type: string
+              payload:
+                $ref: '#/definitions/PlanOrderWithDetail'
+  /storage/in/plan-orders/for-check:
+    get:
+      summary: 待检验入库计划单详情
+      description: 根据入库计划单Id列表，查询入库计划单待检验清单信息
+      tags:
+        - PlanOrder
+      parameters:
+        - name: id
+          in: query
+          type: array
+          uniqueItems: true
+          collectionFormat: pipes
+          minItems: 1
+          items:
+            type: integer
+            minimum: 1
+          required: true
+          description: 入库计划单Id数组
+      responses:
+        200:
+          description: 入库计划单信息
+          schema:
+            required: 
+              - payload
+            properties:
+              message:
+                type: string
+              payload:
+                type: array
+                items:
+                  $ref: '#/definitions/PlanOrderWithDetailForCheck'
+  /storage/in/plan-orders/check-passed:
+    put:
+      summary: 入库计划单检验通过
+      description: 指定的入库计划单，全部检验通过，不存在缺损
+      tags:
+        - PlanOrder
+      parameters:
+        - name: id
+          in: query
+          type: array
+          uniqueItems: true
+          collectionFormat: pipes
+          minItems: 1
+          items:
+            type: integer
+            minimum: 1
+          required: true
+          description: 检验通过的入库计划单Id数组
+      responses:
+        200:
+          $ref: '#/responses/CheckSuccessResponse'
+        400:
+          $ref: '#/responses/CheckFailResponse'
+  /storage/in/plan-orders/check:
+    put:
+      summary: 入库计划单检验
+      description: 根据入库计划单检验情况，生成检验单
+      tags:
+        - PlanOrder
+      parameters:
+        - name: checkInfo
+          in: body
+          description: 检验结果
+          required: true
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/CheckInfo'
+      responses:
+        200:
+          $ref: '#/responses/CheckSuccessResponse'
+        400:
+          $ref: '#/responses/CheckFailResponse'
+  /storage/in/part-check-orders/init:
+    get:
+      summary: 检验单界面初始化数据
+      tags:
+        - CheckOrder
+      responses:
+        200:
+          description: 检验界面初始化数据
+          schema:
+            required:
+              - payload
+            properties:
+              message:
+                type: string
+              payload:
+                $ref: '#/definitions/CheckOrderInit'
+  /storage/in/part-check-orders:
+    get:
+      summary: 检验单列表
+      description: 根据查询条件，返回符合条件的入库计划单并按指定规则排序
+      parameters:
+        - name: code
+          in: query
+          description: 入库检验单编号
+          type: array
+          uniqueItems: true
+          collectionFormat: pipes
+          items:
+            type: string
+        - name: planOrderCode
+          in: query
+          description: 入库计划单编号
+          type: array
+          uniqueItems: true
+          collectionFormat: pipes
+          items:
+            type: string
+        - name: createTimeStart
+          in: query
+          description: 检验起始时间
+          type: string
+          format: date
+        - name: createTimeEnd
+          in: query
+          description: 检验结束时间
+          type: string
+          format: date
+        - name: warehouseId
+          in: query
+          description: 仓库id
+          type: integer
+          minimum: 1
+        - name: remark
+          in: query
+          description: 备注
+          type: string
+        - name: pageSize
+          in: query
+          description: 每页数据量
+          type: integer
+          default: 50
+          minimum: 10
+        - name: pageIndex
+          in: query
+          description: 指定页
+          type: integer
+          default: 0
+          minimum: 0
+        - name: sortField
+          in: query
+          description: 排序字段
+          type: string
+          default: createTime
+        - name: isDesc
+          in: query
+          description: 倒序排列
+          type: boolean
+          default: false
+          allowEmptyValue: true
+      tags:
+        - CheckOrder
+      responses:
+        200:
+          description: 检验单列表
+          schema:
+            required:
+              - payload
+            properties:
+              message:
+                type: string
+              payload:
+                required:
+                  - content
+                  - totalElements
+                properties:
+                  content:
+                    type: array
+                    items:
+                      required:
+                        - id
+                        - code
+                        - type
+                      properties:
+                        id:
+                          type: integer
+                          minimum: 1
+                          description: 检验单id
+                        code:
+                          type: string
+                          description: 检验单编号
+                        warehouseName:
+                          type: string
+                          description: 仓库名称
+                        partPlanOrderCode:
+                          type: string
+                          description: 计划单编号
+                        type:
+                          type: integer
+                          description: 入库类型
+                          enum: [1,2,3,4,5,6,7,8]
+                        otherCompanyName:
+                          type: string
+                          description: 对方单位名称
+                        remark:
+                          type: string
+                          description: 备注
+                        createTime:
+                          type: string
+                          format: date-time
+                          description: 创建时间
+                  pageIndex:
+                    type: integer
+                    format: int32
+                    description: 当前页码
+                  pageSize:
+                    type: integer
+                    format: int32
+                    description: 每页显示数量
+                  sort:
+                    $ref: '#/definitions/Sort'
+                  totalElements:
+                    type: integer
+                    format: int64
+                    description: 总命中条数
+                    minimum: 0
+                  totalPages:
+                    type: integer
+                    format: int32
+                    description: 总命中页数
+  /storage/in/part-check-orders/{id}/detail:
+    get:
+      summary: 检验单详情
+      description: 指定检验单的详情
+      parameters:
+        - name: id
+          in: path
+          description: 检验单id
+          required: true
+          type: integer
+          minimum: 1
+      tags:
+        - CheckOrder
+      responses:
+        200:
+          description: 指定id的检验单详情信息
+          schema:
+            required:
+              - payload
+            properties:
+              message:
+                type: string
+              payload:
+                required:
+                  - id
+                  - code
+                  - planType
+                  - details
+                properties:
+                  id:
+                    type: integer
+                    minimum: 1
+                    description: 检验单id
+                  code:
+                    type: string
+                    description: 检验单编号
+                  planOrderCode:
+                    type: string
+                    description: 计划单编号
+                  planType:
+                    type: integer
+                    description: 入库类型
+                    enum: [1,2,3,4,5,6,7,8]
+                  otherCompanyName:
+                    type: string
+                    description: 供货单位
+                  warehouseName:
+                    type: string
+                    description: 入库仓库
+                  createTime:
+                    type: string
+                    format: date-time
+                    description: 检验时间
+                  remark:
+                    type: string
+                    description: 备注
+                  details:
+                    type: array
+                    minItems: 1
+                    items:
+                      properties:
+                        sparePartId:
+                          type: integer
+                          minimum: 1
+                          description: 备件Id
+                        sparePartCode:
+                          type: string
+                          description: 备件编号
+                        sparePartName:
+                          type: string
+                          description: 备件名称
+                        location:
+                          type: string
+                          description: 库位
+                        quantity:
+                          type: integer
+                          description: 检验量
+                          minimum: 1
+                        remark:
+                          type: string
+                          description: 备注
+  /storage/transfer/part-shift-orders/init:
+    get:
+      summary: 上架界面初始化数据
+      tags:
+        - ShiftOrder
+      responses:
+        200:
+          description: 上架界面初始化数据
+          schema:
+            type: object
+            required:
+              - payload
+            properties:
+              message:
+                type: string
+              payload:
+                $ref: '#/definitions/ShiftOrderInit'
+  /storage/transfer/parts-stock/for-shift:
+    get:
+      summary: 待上架备件
+      description: 查询指定仓库下的检验区的备件库存，返回库存列表及推荐库位信息
+      parameters:
+        - name: warehouseId
+          in: query
+          description: 仓库id
+          required: true
+          type: integer
+          minimum: 1
+      tags:
+        - Shift
+      responses:
+        200:
+          description: 待上架备件库存信息及推荐库位
+          schema:
+            type: object
+            required:
+              - payload
+            properties:
+              message:
+                type: string
+              payload:
+                type: array
+                items:
+                  required:
+                    - sparePartId
+                    - sparePartCode
+                    - sparePartName
+                    - checkAreaLocationId
+                    - checkAreaLocation
+                    - quantity
+                  properties:
+                    sparePartId:
+                      type: integer
+                      minimum: 1
+                      description: 备件Id
+                    sparePartCode:
+                      type: string
+                      description: 备件编号
+                    sparePartName:
+                      type: string
+                      description: 备件名称
+                    checkAreaLocationId:
+                      type: integer
+                      minimum: 1
+                      description: 检验库位Id
+                    checkAreaLocation:
+                      type: string
+                      description: 检验库位
+                    quantity:
+                      type: integer
+                      description: 数量
+                      minimum: 0
+                    recommendedLocationId:
+                      type: integer
+                      minimum: 1
+                      description: 推荐库位Id
+                    recommendedLocation:
+                      type: string
+                      description: 推荐库位
+  /storage/transfer/part-shift-orders:
+    get:
+      summary: 上架单
+      description:  根据查询条件，返回相应的上架单
+      parameters:
+        - name: code
+          in: query
+          description: 上架单编号
+          type: array
+          uniqueItems: true
+          collectionFormat: pipes
+          items:
+            type: string
+        - name: sparePart
+          in: query
+          description: 备件编号/姓名
+          type: string
+        - name: createTimeStart
+          in: query
+          description: 起始时间
+          type: string
+          format: date
+        - name: createTimeEnd
+          in: query
+          description: 结束时间
+          type: string
+          format: date
+        - name: warehouseId
+          in: query
+          description: 仓库id
+          type: integer
+          minimum: 1
+        - name: location
+          in: query
+          description: 库位
+          type: string
+        - name: pageSize
+          in: query
+          description: 每页数据量
+          type: integer
+          default: 50
+          minimum: 10
+        - name: pageIndex
+          in: query
+          description: 指定页
+          type: integer
+          default: 0
+          minimum: 0
+        - name: sortField
+          in: query
+          description: 排序字段
+          type: string
+          default: createTime
+        - name: isDesc
+          in: query
+          description: 倒序排列
+          type: boolean
+          default: false
+          allowEmptyValue: true
+      tags:
+        - ShiftOrder
+      responses:
+        200:
+          description: 上架单列表
+          schema:
+            required:
+              - payload
+            properties:
+              message:
+                type: string
+              payload:
+                required:
+                  - content
+                  - totalElements
+                properties:
+                  content:
+                    type: array
+                    items:
+                      required:
+                        - id
+                        - code
+                        - warehouseName
+                      properties:
+                        id:
+                          type: integer
+                          minimum: 1
+                          description: 上架单id
+                        code:
+                          type: string
+                          description: 上架单编号
+                        warehouseName:
+                          type: string
+                          description: 仓库
+                        remark:
+                          type: string
+                          description: 备注
+                        createTime:
+                          type: string
+                          description: 创建时间
+                          format: date-time
+                        creator:
+                          type: string
+                          description: 创建人
+                  pageIndex:
+                    type: integer
+                    format: int32
+                    description: 当前页码
+                  pageSize:
+                    type: integer
+                    format: int32
+                    description: 每页显示数量
+                  sort:
+                    $ref: '#/definitions/Sort'
+                  totalElements:
+                    type: integer
+                    format: int64
+                    description: 总命中条数
+                    minimum: 0
+                  totalPages:
+                    type: integer
+                    format: int32
+                    description: 总命中页数
+    post:
+      summary: 生成上架单
+      description: 根据上架明细，生成上架单
+      tags:
+        - Shift
+        - ShiftOrder
+      parameters:
+        - name: partShiftInfo
+          in: body
+          required: true
+          description: 上架单明细
+          schema:
+            required:
+              - warehouseId
+              - details
+            properties:
+              warehouseId:
+                type: integer
+                minimum: 1
+                description: 仓库id
+              remark:
+                type: string
+                description: 备注
+              details:
+                type: array
+                minItems: 1
+                items:
+                  required:
+                    - sparePartId
+                    - checkAreaLocationId
+                    - locations
+                  properties:
+                    sparePartId:
+                      type: integer
+                      minimum: 1
+                      description: 备件id
+                    checkAreaLocationId:
+                      type: integer
+                      minimum: 1
+                      description: 检验区库位id
+                    locations:
+                      type: array
+                      minItems: 1
+                      items:
+                        required:
+                          - storageAreaLocationId
+                          - quantity
+                        properties:
+                          storageAreaLocationId:
+                            type: integer
+                            minimum: 1
+                            description: 目标库位id
+                          quantity:
+                            type: integer
+                            description: 数量
+                            minimum: 1
+                    remark:
+                      type: string
+                      description: 备注
+      responses:
+        201:
+          description: 备件上架成功
+          schema:
+            required:
+              - payload
+            properties:
+              message:
+                type: string
+              payload:
+                required:
+                  - shiftOrderId
+                  - shiftOrderCode
+                properties:
+                  shiftOrderId:
+                    description: 成功生成的移库单Id
+                    type: integer
+                    minimum: 1
+                  shiftOrderCode:
+                    description: 成功生成的移库单编号
+                    type: string
+        400:
+          description: 备件上架失败
+          schema:
+            required:
+              - message
+            properties:
+              message:
+               type: string
+              payload:
+                properties:
+                  errorRecords:
+                    type: array
+                    items:
+                      required:
+                        - sparePartId
+                        - checkAreaLocationId
+                      properties:
+                        sparePartId:
+                          type: integer
+                          minimum: 1
+                          description: 备件id
+                        checkAreaLocationId:
+                          type: integer
+                          minimum: 1
+                          description: 检验区库位id
+                        message:
+                          type: string
+                          description: 错误信息
+  /storage/transfer/part-shift-orders/{id}/detail:
+    get:
+      summary: 上架单详情
+      description: 指定上架单的详细信息
+      parameters:
+        - name: id
+          in: path
+          description: 上架单id
+          required: true
+          type: integer
+          minimum: 1
+      tags:
+        - ShiftOrder
+      responses:
+        200:
+          description: 指定id的上架单详情信息
+          schema:
+            required:
+              - payload
+            properties:
+              message:
+                type: string
+              payload:
+                required:
+                  - id
+                  - code
+                  - warehouseName
+                  - details
+                properties:
+                  id:
+                    type: integer
+                    minimum: 1
+                    description: 上架单id
+                  code:
+                    type: string
+                    description: 上架单编号
+                  warehouseName:
+                    type: string
+                    description: 仓库名称
+                  createTime:
+                    type: string
+                    format: date-time
+                    description: 创建时间
+                  creator:
+                    type: string
+                    description: 创建人
+                  remark:
+                    type: string
+                    description: 备注
+                  details:
+                    type: array
+                    minItems: 1
+                    items:
+                      required:
+                        - sparePartId
+                        - sparePartCode
+                        - sparePartName
+                        - location
+                        - quantity
+                      properties:
+                        sparePartId:
+                          type: integer
+                          minimum: 1
+                          description: 备件id
+                        sparePartCode:
+                          type: string
+                          description: 备件编号
+                        sparePartName:
+                          type: string
+                          description: 备件名称
+                        location:
+                          type: string
+                          description: 库位
+                        quantity:
+                          type: integer
+                          description: 数量
+                          minimum: 1
+                        remark:
+                          type: string
+                          description: 备注
+  /warehouses/{warehouseId}/storage-area-locations:
+    get:
+      summary: 保管区库位
+      description: 根据查询条件，检索保管区库位
+      tags:
+        - Location
+        - Shift
+      parameters:
+        - name: warehouseId
+          in: path
+          type: integer
+          minimum: 1
+          required: true
+          description: 仓库Id
+        - name: sparePartId
+          type: integer
+          minimum: 1
+          in: query
+          description: 备件Id
+        - name: locationCode
+          in: query
+          type: string
+          description: 库位编号
+      responses:
+        200:
+          description: 保管区库位
+          schema:
+            required:
+              - payload
+            properties:
+              message:
+                type: string
+              payload:
+                $ref: '#/definitions/Locations'
+  /warehouses/{warehouseId}/check-area-locations:
+    get:
+      summary: 检验区库位
+      tags:
+        - Location
+        - PlanOrder
+      parameters:
+        - name: warehouseId
+          in: path
+          type: integer
+          minimum: 1
+          required: true
+          description: 仓库Id
+      responses:
+        200:
+          description: 检验区库位
+          schema:
+            required:
+              - payload
+            properties:
+              message:
+                type: string
+              payload:
+                $ref: '#/definitions/Locations'
+definitions:
+  Warehouses:
+    description: 当前人员所负责仓库的列表
+    type: array
+    items:
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: integer
+          minimum: 1
+          description: 仓库Id
+        name:
+          type: string
+          description: 仓库名称
+  Options:
+    description: 允许的操作
+    properties:
+      isCheckable:
+        type: boolean
+        default: false
+        description: 是否可检验
+  PlanOrderInit:
+    description: 检验界面初始化数据
+    required:
+      - warehouses
+    properties:
+      warehouses:
+        $ref: '#/definitions/Warehouses'
+  CheckOrderInit:
+    description: 检验单查询初始化数据
+    required:
+      - warehouses
+    properties:
+      warehouses:
+        $ref: '#/definitions/Warehouses'
+  ShiftOrderInit:
+    description: 上架初始化数据
+    required:
+      - warehouses
+    properties:
+      warehouses:
+        $ref: '#/definitions/Warehouses'
+  Locations:
+    description: 库位列表
+    type: array
+    items:
+      required:
+        - id
+        - code
+      properties:
+        id:
+          type: integer
+          minimum: 1
+          description: 库位Id
+        code:
+          type: string
+          description: 库位编号
+  PlanOrder:
+    description: 入库计划单
+    type: object
+    required:
+      - id
+      - code
+      - warehousecName
+      - type
+      - status
+    properties:
+      id:
+        type: integer
+        minimum: 1
+        description: 入库计划单Id
+      code:
+        type: string
+        description: 入库计划单编号
+      warehousecName:
+        type: string
+        description: 仓库名称
+      brandName:
+        type: string
+        description: 品牌
+      type:
+        type: integer
+        description: 入库计划单类型
+        enum: [1,2,3,4,5,6,7,8]
+      otherCompanyName:
+        type: string
+        description: 对方单位名称
+      sourceCode:
+        type: string
+        description: 源单据编号
+      status:
+        type: integer
+        description: 入库计划单状态
+        enum: [1,2,3,4]
+      amount:
+        type: number
+        format: float
+        description: 总金额
+        minimum: 0
+      options:
+        $ref: '#/definitions/Options'
+  PlanOrderDetail:
+    description: 入库计划清单
+    required:
+      - sparePartId
+      - sparePartCode
+      - sparePartName
+      - planQuantity
+      - uncheckedQuantity
+    properties:
+      sparePartId:
+        type: integer
+        minimum: 1
+        description: 备件Id
+      sparePartCode:
+        type: string
+        description: 备件编号
+      sparePartName:
+        type: string
+        description: 备件名称
+      planQuantity:
+        type: integer
+        description: 备件计划量
+        minimum: 1
+      uncheckedQuantity:
+        type: integer
+        description: 待检验备件量
+        minimum: 0
+      unit:
+        type: string
+        description: 计量单位
+      locationId:
+        type: integer
+        minimum: 1
+        description: 检验区推荐库位Id
+      location:
+        type: string
+        description: 检验区推荐库位
+  PlanOrderWithDetail:
+    description: 入库计划单详细信息包括主清单
+    type: object
+    required:
+      - id
+      - code
+      - type
+      - status
+      - details
+    properties:
+      id:
+        type: integer
+        minimum: 1
+        description: 入库计划单Id
+      code:
+        type: string
+        description: 入库计划单编号
+      warehouseName:
+        type: string
+        description: 仓库名称
+      otherCompanyName:
+        type: string
+        description: 对方单位名称
+      type:
+        type: integer
+        description: 入库计划单类型
+        enum: [1,2,3,4,5,6,7,8]
+      status:
+        type: integer
+        description: 入库计划单状态
+        enum: [1,2,3,4]
+      amount:
+        type: number
+        format: float
+        description: 总金额
+        minimum: 0
+      createTime:
+        type: string
+        format: date-time
+        description: 创建时间
+      details:
+        description: 清单信息
+        type: array
+        minItems: 1
+        items:
+          $ref: '#/definitions/PlanOrderDetail'
+      histories:
+        description: 历史检验记录
+        type: array
+        items:
+          required:
+            - checkOrderId
+            - checkOrderCode
+          properties:
+            checkOrderId:
+              type: integer
+              minimum: 1
+              description: 检验单Id
+            checkOrderCode:
+              type: string
+              description: 检验单编号
+      options:
+        $ref: '#/definitions/Options'
+  PlanOrderWithDetailForCheck:
+    description: 入库计划单详细信息包括主清单
+    type: object
+    required:
+      - id
+      - code
+      - type
+      - warehouseId
+      - warehouseName
+      - details
+    properties:
+      id:
+        type: integer
+        minimum: 1
+        description: 入库计划单Id
+      code:
+        type: string
+        description: 入库计划单编号
+      type:
+        type: integer
+        description: 入库计划单类
+        enum: [1,2,3,4,5,6,7,8]
+      warehouseId:
+        type: integer
+        minimum: 1
+        description: 仓库Id
+      warehouseName:
+        type: string
+        description: 仓库名称
+      details:
+        description: 清单信息
+        type: array
+        minItems: 1
+        items:
+          $ref: '#/definitions/PlanOrderDetail'
+  CheckInfo:
+    type: object
+    description: 检验结果
+    required:
+      - planOrderId
+      - details
+    properties:
+      planOrderId:
+        type: integer
+        minimum: 1
+        description: 入库计划单Id
+      remark:
+        type: string
+        description: 备注
+      details:
+        type: array
+        description: 入库计划检验明细
+        minItems: 1
+        items:
+          required:
+            - sparePartId
+            - quantity
+            - locationId
+          properties:
+            sparePartId:
+              type: integer
+              minimum: 1
+              description: 备件Id
+            quantity:
+              type: integer
+              description: 检验量
+              minimum: 1
+            locationId:
+              type: integer
+              minimum: 1
+              description: 目标库位Id
+            remark:
+              type: string
+              description: 备注
+  Sort:
+    type: object
+    description: 排序方式 ASC升  DESC降
+responses:
+  CheckSuccessResponse:
+    description: 入库计划检验成功
+    schema:
+      type: object
+      required:
+        - payload
+      properties:
+        message:
+          type: string
+        payload:
+          required:
+            - checkOrders
+          properties:
+            checkOrders:
+              description: 成功生成的检验单
+              type: array
+              minItems: 1
+              items:
+                required:
+                  - id
+                  - code
+                properties:
+                  id:
+                    type: integer
+                    minimum: 1
+                    description: 检验单Id
+                  code:
+                    type: string
+                    description: 检验单编号
+  CheckFailResponse:
+    description: 入库计划检验失败
+    schema:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+        payload:
+          properties:
+            checkOrders:
+              description: 成功生成的检验单
+              type: array
+              items:
+                required:
+                  - id
+                  - code
+                properties:
+                  id:
+                    type: integer
+                    minimum: 1
+                    description: 检验单Id
+                  code:
+                    type: string
+                    description: 检验单编号
+            errorPlanOrders:
+              type: array
+              description: 失败的入库计划单Id
+              items:
+                required:
+                  - planOrderId
+                properties:
+                  planOrderId:
+                    type: integer
+                    minimum: 1
+                  message:
+                    type: string

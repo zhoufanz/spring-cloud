@@ -1,0 +1,8 @@
+#spring:
+#  application:
+#    name: warehouse-service
+#  cloud:
+#    config:
+#      uri: http://service-configuration:2222
+#      label: develop
+#      profile: nicholas
